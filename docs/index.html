@@ -3,14 +3,28 @@
 <head>
   <title>Search</title>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/lunr.js/2.3.9/lunr.min.js"></script>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 20px; }
+    #searchBox { width: 100%; padding: 10px; font-size: 16px; }
+    .result { margin-bottom: 20px; }
+    .result-title { font-size: 18px; font-weight: bold; }
+    .result-url { color: blue; font-size: 14px; }
+    .result-snippet { font-size: 14px; color: #555; }
+    .pagination { margin-top: 20px; text-align: center; }
+    .pagination button { margin: 0 5px; padding: 5px 10px; cursor: pointer; }
+    .pagination button.disabled { cursor: not-allowed; opacity: 0.5; }
+  </style>
 </head>
 <body>
-  <input type="text" id="searchBox" placeholder="Search...">
-  <ul id="results"></ul>
+  <input type="text" id="searchBox" placeholder="Search..." oninput="handleSearch()">
+  <div id="results"></div>
+  <div class="pagination" id="pagination"></div>
 
   <script>
     let index;
     let pages;
+    let resultsPerPage = 10; // Number of results per page
+    let currentPage = 1;
 
     // Fetch the search index
     fetch('/docs.cibseven.org/search.json')
@@ -25,18 +39,82 @@
         });
       });
 
-    document.getElementById('searchBox').addEventListener('input', function () {
-      const query = this.value;
-      const results = index.search(query);
-      const resultList = document.getElementById('results');
-      resultList.innerHTML = '';
-      results.forEach(result => {
+    function handleSearch() {
+      const query = document.getElementById('searchBox').value.trim();
+      if (!query) {
+        renderResults([]);
+        return;
+      }
+
+      const rawResults = index.search(query);
+      const searchResults = rawResults.map(result => {
         const page = pages.find(p => p.id === result.ref);
-        const li = document.createElement('li');
-        li.innerHTML = `<a href="${page.url}">${page.title}</a>`;
-        resultList.appendChild(li);
+        const snippet = getSnippet(page.content, query);
+        return { ...page, snippet };
       });
-    });
+
+      renderResults(searchResults);
+    }
+
+    function renderResults(results) {
+      currentPage = 1; // Reset to the first page
+      const totalPages = Math.ceil(results.length / resultsPerPage);
+      showPage(results, totalPages);
+    }
+
+    function showPage(results, totalPages) {
+      const start = (currentPage - 1) * resultsPerPage;
+      const end = start + resultsPerPage;
+      const paginatedResults = results.slice(start, end);
+
+      const resultsContainer = document.getElementById('results');
+      resultsContainer.innerHTML = paginatedResults.map(result => `
+        <div class="result">
+          <div class="result-title"><a href="${result.url}">${result.title}</a></div>
+          <div class="result-url">${result.url}</div>
+          <div class="result-snippet">${result.snippet}</div>
+        </div>
+      `).join('');
+
+      renderPagination(totalPages, results);
+    }
+
+    function renderPagination(totalPages, results) {
+      const paginationContainer = document.getElementById('pagination');
+      paginationContainer.innerHTML = `
+        <button ${currentPage === 1 ? 'class="disabled"' : ''} onclick="changePage(-1)">Previous</button>
+        Page ${currentPage} of ${totalPages}
+        <button ${currentPage === totalPages ? 'class="disabled"' : ''} onclick="changePage(1)">Next</button>
+      `;
+    }
+
+    function changePage(direction) {
+      const query = document.getElementById('searchBox').value.trim();
+      const rawResults = index.search(query);
+      const searchResults = rawResults.map(result => {
+        const page = pages.find(p => p.id === result.ref);
+        const snippet = getSnippet(page.content, query);
+        return { ...page, snippet };
+      });
+
+      const totalPages = Math.ceil(searchResults.length / resultsPerPage);
+      currentPage = Math.max(1, Math.min(currentPage + direction, totalPages));
+      showPage(searchResults, totalPages);
+    }
+
+    function getSnippet(content, query) {
+      const queryRegex = new RegExp(`\\b(${query.split(/\s+/).join('|')})\\b`, 'i');
+      const matchIndex = content.search(queryRegex);
+
+      if (matchIndex === -1) return content.slice(0, 150) + '...'; // Fallback to beginning
+      const snippetStart = Math.max(0, matchIndex - 50);
+      const snippetEnd = Math.min(content.length, matchIndex + 100);
+
+      return (
+        content.slice(snippetStart, snippetEnd)
+          .replace(queryRegex, '<strong>$1</strong>') + '...'
+      );
+    }
   </script>
 </body>
 </html>
