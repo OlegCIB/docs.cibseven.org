@@ -43,7 +43,7 @@ try {
       id: path.relative(inputDir, filePath).replace(/\\/g, '/'), // Relative path as ID
       title: $('title').text() || 'Untitled',
       content: contentText || 'No content available', // Use extracted content or fallback
-      url: '/' + path.relative(inputDir, filePath).replace(/\\/g, '/')
+      url: '/docs.cibseven.org/manual/latest/' + path.relative(inputDir, filePath).replace(/\\/g, '/')
     };
   });
 
