@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Search</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/lunr.js/2.3.9/lunr.min.js"></script>
+</head>
+<body>
+  <input type="text" id="searchBox" placeholder="Search...">
+  <ul id="results"></ul>
+
+  <script>
+    let index;
+    let pages;
+
+    // Fetch the search index
+    fetch('/search.json')
+      .then(response => response.json())
+      .then(data => {
+        pages = data;
+        index = lunr(function () {
+          this.ref('id');
+          this.field('title');
+          this.field('content');
+          data.forEach(doc => this.add(doc));
+        });
+      });
+
+    document.getElementById('searchBox').addEventListener('input', function () {
+      const query = this.value;
+      const results = index.search(query);
+      const resultList = document.getElementById('results');
+      resultList.innerHTML = '';
+      results.forEach(result => {
+        const page = pages.find(p => p.id === result.ref);
+        const li = document.createElement('li');
+        li.innerHTML = `<a href="${page.url}">${page.title}</a>`;
+        resultList.appendChild(li);
+      });
+    });
+  </script>
+</body>
+</html>
