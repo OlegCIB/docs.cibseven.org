@@ -21,7 +21,7 @@ function readFilesRecursively(dir, excludedFolders = [], fileList = []) {
 }
 
 // Main script
-const inputDir = './docs'; // Change to your directory containing HTML files
+const inputDir = './docs/manual/latest'; // Change to your directory containing HTML files
 const outputFile = './docs/search.json'; // Output file path
 const excludedFolders = ['javadoc', 'rest']; // Folders to exclude
 
