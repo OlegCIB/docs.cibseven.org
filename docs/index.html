@@ -13,7 +13,7 @@
     let pages;
 
     // Fetch the search index
-    fetch('/search.json')
+    fetch('/docs.cibseven.org/search.json')
       .then(response => response.json())
       .then(data => {
         pages = data;
